@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>US100 — 1H Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+  body { background: #0d0d0d; color: #fff; padding: 20px; }
+  .title { background: #0f3460; text-align: center; padding: 16px; font-size: 20px; font-weight: bold; border-radius: 6px 6px 0 0; }
+  .subtitle { background: #1a1a2e; text-align: center; padding: 8px; font-size: 12px; color: #ffd700; margin-bottom: 16px; }
+  .time-bar { background: #1a1a2e; border: 1px solid #2a2a4a; padding: 10px 16px; border-radius: 4px; margin-bottom: 12px; display:flex; justify-content:space-between; align-items:center; }
+  .time-bar .clock { color: #ffd700; font-weight:bold; font-size:16px; }
+  .time-bar .status-ok { color: #00ff88; font-weight:bold; font-size:13px; }
+  .time-bar .status-no { color: #ff4757; font-weight:bold; font-size:13px; }
+  .time-bar .zones { color: #8892a4; font-size:11px; }
+  .live-bar { background: #0d1a0d; border: 1px solid #00ff88; padding: 6px 16px; border-radius: 4px; margin-bottom: 12px; display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#8892a4; }
+  .live-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#00ff88; margin-right:6px; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .live-bar .updated { color:#00ff88; font-size:11px; }
+  .no-trade-banner { display:none; font-size: 20px; font-weight: bold; text-align: center; padding: 20px; border-radius: 4px; margin-bottom: 16px; }
+  @keyframes flashBan { 0%,100% { background:#ff4757; color:#fff; box-shadow:0 0 40px #ff4757; } 50% { background:#7a0010; color:#ff4757; box-shadow:0 0 10px #ff4757; } }
+  .no-trade-banner.active { display:block; animation: flashBan 0.8s infinite; }
+  .section-header { background: #1e1e3f; padding: 10px 14px; font-size: 13px; font-weight: bold; color: #00d2d3; border-left: 3px solid #00d2d3; margin-bottom: 2px; }
+  .grid { display: grid; gap: 2px; margin-bottom: 16px; }
+  .cell { background: #1a1a2e; padding: 10px 12px; font-size: 12px; text-align: center; border: 1px solid #2a2a4a; }
+  .cell-header { background: #252545; color: #00d2d3; font-weight: bold; font-size: 11px; padding: 8px 12px; text-align: center; border: 1px solid #2a2a4a; }
+  .cell-label { background: #1a1a2e; color: #fff; font-weight: bold; font-size: 12px; text-align: center; border: 1px solid #2a2a4a; }
+  input.cell-input { width: 100%; background: #1a1a40; color: #ffd700; font-weight: bold; font-size: 20px; text-align: center; border: 2px solid #ffd700; padding: 12px; }
+  input.cell-input:focus { outline: none; border-color: #00d2d3; }
+  .signal-box { padding: 30px; text-align: center; font-size: 22px; font-weight: bold; border-radius: 4px; margin-bottom: 16px; border: 2px solid transparent; }
+  .flash-short { background: #2a0d0d; color: #ff4757; border-color: #ff4757; }
+  .flash-long  { background: #0d2a1a; color: #00ff88; border-color: #00ff88; }
+  .signal-wait { background: #1a1a2e; color: #8892a4; border-color: #2a2a4a; }
+  .next-cell { background: #1a1a2e; color: #00ff88; font-weight: bold; font-size: 14px; text-align: center; border: 1px solid #2a2a4a; padding: 14px; }
+  .ref-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px; }
+  .ref-cell { padding: 10px; font-size: 12px; text-align: center; border: 1px solid #2a2a4a; }
+  .ref-row-0 { background: #0d1b2a; }
+  .ref-row-1 { background: #2a0d0d; }
+  .ref-row-2 { background: #0d1b2a; }
+  .ref-row-3 { background: #2a0d0d; }
+</style>
+</head>
+<body>
+
+<div class="title">📈 US100 — 1H DASHBOARD</div>
+<div class="subtitle">1H last point → tells you which direction to trade on 5M</div>
+
+<!-- TIME BAR -->
+<div class="time-bar">
+  <div>
+    <div class="clock" id="clockDisplay">--:--:--</div>
+    <div class="zones">No-trade zones: 09:00–10:00 &nbsp;|&nbsp; 16:00–18:00</div>
+  </div>
+  <div id="timeStatus" class="status-ok">✅ TRADING ALLOWED</div>
+</div>
+
+<!-- LIVE BAR -->
+<div class="live-bar">
+  <div><span class="live-dot"></span> LIVE — Auto-updates from TradingView alerts</div>
+  <div class="updated" id="updatedAt">Waiting for first alert...</div>
+</div>
+
+<!-- NO TRADE BANNER -->
+<div class="no-trade-banner" id="noTradeBanner">
+  🚫 NO TRADE ZONE — CLOSE PLATFORM — Come back later
+</div>
+
+<!-- 1H LAST POINT -->
+<div class="section-header">1H LAST POINT</div>
+<div class="grid" style="margin-bottom:2px;grid-template-columns:1.2fr 0.8fr 2fr">
+  <div class="cell-header">TIMEFRAME</div>
+  <div class="cell-header">LAST POINT</div>
+  <div class="cell-header">WHAT COMES NEXT ON 5M</div>
+</div>
+<div class="grid" style="margin-bottom:16px;grid-template-columns:1.2fr 0.8fr 2fr">
+  <div class="cell cell-label">1H</div>
+  <div class="cell" style="padding:0"><input class="cell-input" id="lastPoint1H" value="LL" maxlength="2" oninput="update()"></div>
+  <div class="next-cell" id="next1H">LH bounce coming — LOOK LONG on 5M</div>
+</div>
+
+<!-- SIGNAL BOX -->
+<div class="signal-box flash-long" id="signalBox">
+  🟢 LOOK LONG on 5M — Wait for HL-C2 — Draw Fib — Enter C4
+</div>
+
+<!-- REFERENCE -->
+<div class="section-header">📖 QUICK REFERENCE</div>
+<div class="ref-grid" style="margin-bottom:2px">
+  <div class="cell-header">1H LAST POINT</div>
+  <div class="cell-header">WHAT COMES NEXT</div>
+  <div class="cell-header">5M DIRECTION</div>
+</div>
+<div class="ref-grid">
+  <div class="ref-cell ref-row-0" style="color:#ffd700">LL</div>
+  <div class="ref-cell ref-row-0" style="color:#8892a4">LH bounce forming</div>
+  <div class="ref-cell ref-row-0" style="color:#00ff88">🟢 LONG on 5M</div>
+
+  <div class="ref-cell ref-row-2" style="color:#ffd700">HL</div>
+  <div class="ref-cell ref-row-2" style="color:#8892a4">HH push forming</div>
+  <div class="ref-cell ref-row-2" style="color:#00ff88">🟢 LONG on 5M</div>
+
+  <div class="ref-cell ref-row-1" style="color:#ffd700">HH</div>
+  <div class="ref-cell ref-row-1" style="color:#8892a4">LH pullback forming</div>
+  <div class="ref-cell ref-row-1" style="color:#ff4757">🔴 SHORT on 5M</div>
+
+  <div class="ref-cell ref-row-3" style="color:#ffd700">LH</div>
+  <div class="ref-cell ref-row-3" style="color:#8892a4">LL drop forming</div>
+  <div class="ref-cell ref-row-3" style="color:#ff4757">🔴 SHORT on 5M</div>
+</div>
+
+<script>
+function isNoTradeTime() {
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  return (mins >= 540 && mins < 600) || (mins >= 960 && mins < 1080);
+}
+
+function tickClock() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  document.getElementById('clockDisplay').textContent = pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds());
+  const noTrade = isNoTradeTime();
+  const statusEl = document.getElementById('timeStatus');
+  const bannerEl = document.getElementById('noTradeBanner');
+  if (noTrade) {
+    statusEl.textContent = '🚫 NO TRADE ZONE';
+    statusEl.className = 'status-no';
+    bannerEl.classList.add('active');
+  } else {
+    statusEl.textContent = '✅ TRADING ALLOWED';
+    statusEl.className = 'status-ok';
+    bannerEl.classList.remove('active');
+  }
+}
+
+function get1HOutput(lp) {
+  if (lp === 'LL') return { next:'LH bounce coming', sig:'long', msg:'🟢 LOOK LONG on 5M — Wait for HL-C2 — Draw Fib — Enter C4' };
+  if (lp === 'HL') return { next:'HH push coming',   sig:'long', msg:'🟢 LOOK LONG on 5M — Wait for HL-C2 — Draw Fib — Enter C4' };
+  if (lp === 'HH') return { next:'LH pullback coming', sig:'short', msg:'🔴 LOOK SHORT on 5M — Wait for LH-C2 — Draw Fib — Enter C4' };
+  if (lp === 'LH') return { next:'LL drop coming',    sig:'short', msg:'🔴 LOOK SHORT on 5M — Wait for LH-C2 — Draw Fib — Enter C4' };
+  return { next:'Type HH, LH, HL or LL', sig:'wait', msg:'WAIT — Enter 1H last point' };
+}
+
+function update() {
+  const lp = document.getElementById('lastPoint1H').value.trim().toUpperCase();
+  const out = get1HOutput(lp);
+  document.getElementById('next1H').textContent = out.next;
+
+  const box = document.getElementById('signalBox');
+
+  if (isNoTradeTime()) {
+    box.className = 'signal-box signal-wait';
+    box.textContent = 'NO TRADE ZONE — Do not open any position right now';
+    return;
+  }
+
+  box.className = 'signal-box';
+  box.textContent = out.msg;
+  if (out.sig === 'long')       box.classList.add('flash-long');
+  else if (out.sig === 'short') box.classList.add('flash-short');
+  else                          box.classList.add('signal-wait');
+}
+
+// Poll server for live state
+let lastUpdatedAt = null;
+async function pollState() {
+  try {
+    const res  = await fetch('/state');
+    const data = await res.json();
+    if (data.updatedAt && data.updatedAt !== lastUpdatedAt) {
+      lastUpdatedAt = data.updatedAt;
+      // Use lastPoint from server as 1H last point
+      if (data.lastPoint1H) {
+        document.getElementById('lastPoint1H').value = data.lastPoint1H;
+      }
+      const t = new Date(data.updatedAt);
+      const pad = n => String(n).padStart(2,'0');
+      document.getElementById('updatedAt').textContent =
+        'Last update: ' + pad(t.getHours()) + ':' + pad(t.getMinutes()) + ':' + pad(t.getSeconds());
+      update();
+    }
+  } catch(e) {}
+}
+
+setInterval(tickClock, 1000);
+setInterval(pollState, 3000);
+tickClock();
+update();
+pollState();
+</script>
+</body>
+</html>
