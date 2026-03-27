@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>US100 Trading Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+  body { background: #0d0d0d; color: #fff; padding: 20px; }
+  .title { background: #0f3460; text-align: center; padding: 16px; font-size: 20px; font-weight: bold; border-radius: 6px 6px 0 0; }
+  .subtitle { background: #1a1a2e; text-align: center; padding: 8px; font-size: 12px; color: #ffd700; margin-bottom: 16px; }
+  .section-header { background: #1e1e3f; padding: 10px 14px; font-size: 13px; font-weight: bold; color: #00d2d3; border-left: 3px solid #00d2d3; margin-bottom: 2px; }
+  .grid { display: grid; gap: 2px; margin-bottom: 16px; }
+  .grid-6b { grid-template-columns: 1.5fr 1fr 2fr 2fr 1.5fr 1.5fr; }
+  .cell { background: #1a1a2e; padding: 10px 12px; font-size: 12px; text-align: center; border: 1px solid #2a2a4a; }
+  .cell-header { background: #252545; color: #00d2d3; font-weight: bold; font-size: 11px; padding: 8px 12px; text-align: center; border: 1px solid #2a2a4a; }
+  .cell-label { background: #1a1a2e; color: #fff; font-weight: bold; font-size: 12px; text-align: center; border: 1px solid #2a2a4a; }
+  input.cell-input { width: 100%; background: #1a1a40; color: #ffd700; font-weight: bold; font-size: 16px; text-align: center; border: 2px solid #ffd700; padding: 10px; }
+  input.cell-input:focus { outline: none; border-color: #00d2d3; }
+  .structure { color: #00ff88; font-weight: bold; font-size: 13px; }
+  .action-cell { color: #ffa502; font-size: 11px; }
+
+  /* TIME BAR */
+  .time-bar { background: #1a1a2e; border: 1px solid #2a2a4a; padding: 10px 16px; border-radius: 4px; margin-bottom: 12px; display:flex; justify-content:space-between; align-items:center; }
+  .time-bar .clock { color: #ffd700; font-weight:bold; font-size:16px; }
+  .time-bar .status-ok  { color: #00ff88; font-weight:bold; font-size:13px; }
+  .time-bar .status-no  { color: #ff4757; font-weight:bold; font-size:13px; }
+  .time-bar .zones { color: #8892a4; font-size:11px; }
+
+  /* LIVE INDICATOR */
+  .live-bar { background: #0d1a0d; border: 1px solid #00ff88; padding: 6px 16px; border-radius: 4px; margin-bottom: 12px; display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#8892a4; }
+  .live-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#00ff88; margin-right:6px; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .live-bar .updated { color:#00ff88; font-size:11px; }
+
+  /* NO TRADE BANNER */
+  .no-trade-banner { display:none; font-size: 20px; font-weight: bold; text-align: center; padding: 20px; border-radius: 4px; margin-bottom: 16px; }
+  @keyframes flashBan { 0%,100% { background:#ff4757; color:#fff; box-shadow:0 0 40px #ff4757; } 50% { background:#7a0010; color:#ff4757; box-shadow:0 0 10px #ff4757; } }
+  .no-trade-banner.active { display:block; animation: flashBan 0.8s infinite; }
+
+  /* SIGNAL BOX */
+  .signal-box { padding: 18px; text-align: center; font-size: 15px; font-weight: bold; border-radius: 4px; margin-bottom: 16px; border: 2px solid transparent; }
+  .signal-wait  { background: #0d2a1a; color: #00ff88; border-color: #00ff88; }
+  .signal-watch { background: #1a1400; color: #ffd700; border-color: #ffd700; }
+  @keyframes flashRed   { 0%,100% { background: #ff4757; color: #fff; box-shadow: 0 0 30px #ff4757; } 50% { background: #2a0d0d; color: #ff4757; box-shadow: 0 0 10px #ff4757; } }
+  @keyframes flashGreen { 0%,100% { background: #00ff88; color: #0d0d0d; box-shadow: 0 0 30px #00ff88; } 50% { background: #0d2a1a; color: #00ff88; box-shadow: 0 0 10px #00ff88; } }
+  .flash-short { animation: flashRed   1s infinite; }
+  .flash-long  { animation: flashGreen 1s infinite; }
+
+  /* REFERENCE TABLE */
+  .ref-grid { display: grid; grid-template-columns: 1fr 1.5fr 1fr 2fr 1.5fr 1fr; gap: 2px; }
+  .ref-row-0 { background: #0d1b2a; } .ref-row-1 { background: #2a0d0d; }
+  .ref-row-2 { background: #1a1a0a; } .ref-row-6 { background: #2a1a0a; }
+  .ref-cell { padding: 8px 10px; font-size: 11px; text-align: center; border: 1px solid #2a2a4a; }
+  .note { background: #1a1a2e; color: #8892a4; font-size: 10px; padding: 8px 14px; text-align: center; border: 1px solid #2a2a4a; }
+  .next-cell    { background: #1a1a2e; color: #00ff88; font-weight: bold; font-size: 13px; text-align: center; border: 1px solid #2a2a4a; padding: 10px; }
+  .meaning-cell { background: #1a1a2e; color: #fff; font-size: 11px; text-align: center; border: 1px solid #2a2a4a; padding: 10px; }
+  .enter-cell   { background: #1a1a2e; font-weight: bold; font-size: 12px; text-align: center; border: 1px solid #2a2a4a; padding: 10px; }
+
+  /* SOUND PANEL */
+  .sound-panel { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 4px; padding: 14px 16px; margin-bottom: 16px; }
+  .sound-panel h3 { color: #00d2d3; font-size: 13px; margin-bottom: 12px; border-left: 3px solid #00d2d3; padding-left: 10px; }
+  .sound-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .sound-row label { color: #8892a4; font-size: 11px; min-width: 80px; }
+  .sound-row input[type=range] { flex: 1; min-width: 120px; accent-color: #00d2d3; }
+  .sound-row span { color: #ffd700; font-size: 11px; min-width: 40px; text-align: right; }
+  .sound-title { color: #fff; font-size: 12px; font-weight: bold; margin: 10px 0 6px; }
+  .test-btn { padding: 8px 18px; border: none; border-radius: 4px; font-weight: bold; font-size: 12px; cursor: pointer; }
+  .test-long  { background: #00ff88; color: #0d0d0d; }
+  .test-short { background: #ff4757; color: #fff; }
+  .sound-divider { border: none; border-top: 1px solid #2a2a4a; margin: 10px 0; }
+</style>
+</head>
+<body>
+
+<div class="title">📈  US100 TRADING DASHBOARD</div>
+<div class="subtitle">1H last point → 5M direction — C1-C2-C3-C4 entry at 50% Fib</div>
+
+<!-- TIME BAR -->
+<div class="time-bar">
+  <div>
+    <div class="clock" id="clockDisplay">--:--:--</div>
+    <div class="zones">No-trade zones: 09:00–10:00 &nbsp;|&nbsp; 16:00–18:00</div>
+  </div>
+  <div id="timeStatus" class="status-ok">✅ TRADING ALLOWED</div>
+</div>
+
+<!-- LIVE BAR -->
+<div class="live-bar">
+  <div><span class="live-dot"></span> LIVE — Auto-updates from TradingView alerts</div>
+  <div class="updated" id="updatedAt">Waiting for first alert...</div>
+</div>
+
+<!-- NO TRADE BANNER -->
+<div class="no-trade-banner" id="noTradeBanner">
+  🚫 NO TRADE ZONE — CLOSE PLATFORM — Come back later
+</div>
+
+<!-- STEP 1 -->
+<div class="section-header">STEP 1 — 15M Structure (auto-updated by TradingView)</div>
+<div class="grid" style="margin-bottom:2px;grid-template-columns:1.2fr 0.8fr 0.8fr 1fr">
+  <div class="cell-header">TIMEFRAME</div>
+  <div class="cell-header">SWING HIGH</div>
+  <div class="cell-header">SWING LOW</div>
+  <div class="cell-header">STRUCTURE</div>
+</div>
+<div class="grid" style="margin-bottom:16px;grid-template-columns:1.2fr 0.8fr 0.8fr 1fr">
+  <div class="cell cell-label">15M — STRUCTURE</div>
+  <div class="cell" style="padding:0"><input class="cell-input" id="swingHigh" value="HH" maxlength="2" oninput="update()"></div>
+  <div class="cell" style="padding:0"><input class="cell-input" id="swingLow"  value="HL" maxlength="2" oninput="update()"></div>
+  <div class="cell structure" id="structure">✅ UPTREND</div>
+</div>
+
+<!-- STEP 2 -->
+<div class="section-header">STEP 2 — Which point formed LAST? (auto-updated by TradingView)</div>
+<div class="grid grid-6b" style="margin-bottom:2px">
+  <div class="cell-header">LAST POINT</div>
+  <div class="cell-header">VALUE</div>
+  <div class="cell-header">WHAT COMES NEXT</div>
+  <div class="cell-header">MEANING</div>
+  <div class="cell-header">ACTION</div>
+  <div class="cell-header">ENTER NOW?</div>
+</div>
+<div class="grid grid-6b" style="margin-bottom:16px">
+  <div class="cell cell-label">LAST POINT</div>
+  <div class="cell" style="padding:0"><input class="cell-input" id="lastPoint" value="HL" maxlength="2" oninput="update()"></div>
+  <div class="next-cell"    id="nextSwing">—</div>
+  <div class="meaning-cell" id="meaning">—</div>
+  <div class="cell action-cell" id="action">—</div>
+  <div class="enter-cell"  id="enterNow">—</div>
+</div>
+
+<!-- SIGNAL BOX -->
+<div class="signal-box signal-wait" id="signalBox">Waiting...</div>
+
+<!-- REFERENCE -->
+<div class="section-header">📖  STRUCTURE QUICK REFERENCE</div>
+<div class="ref-grid" style="margin-bottom:2px">
+  <div class="cell-header">PATTERN</div><div class="cell-header">STRUCTURE</div>
+  <div class="cell-header">BIAS</div><div class="cell-header">WHAT IT MEANS</div>
+  <div class="cell-header">ACTION</div><div class="cell-header">PROBABILITY</div>
+</div>
+<div class="ref-grid">
+  <div class="ref-cell ref-row-0" style="color:#ffd700">HH + HL</div><div class="ref-cell ref-row-0">✅ UPTREND</div><div class="ref-cell ref-row-0" style="color:#00ff88">🟢 Bullish</div><div class="ref-cell ref-row-0" style="color:#8892a4">Both highs and lows rising</div><div class="ref-cell ref-row-0" style="color:#ffa502">LONG on pullbacks — Enter C4</div><div class="ref-cell ref-row-0" style="color:#00d2d3">70-80%</div>
+  <div class="ref-cell ref-row-1" style="color:#ffd700">LH + LL</div><div class="ref-cell ref-row-1">🔴 DOWNTREND</div><div class="ref-cell ref-row-1" style="color:#ff4757">🔴 Bearish</div><div class="ref-cell ref-row-1" style="color:#8892a4">Both highs and lows falling</div><div class="ref-cell ref-row-1" style="color:#ffa502">SHORT on rallies — Enter C4</div><div class="ref-cell ref-row-1" style="color:#00d2d3">70-80%</div>
+  <div class="ref-cell ref-row-2" style="color:#ffd700">LH + HL</div><div class="ref-cell ref-row-2">🟡 CONSOLIDATION</div><div class="ref-cell ref-row-2">🟡 Neutral</div><div class="ref-cell ref-row-2" style="color:#8892a4">Shrinking range — no direction</div><div class="ref-cell ref-row-2" style="color:#ff4757">DO NOT TRADE</div><div class="ref-cell ref-row-2" style="color:#00d2d3">~50%</div>
+  <div class="ref-cell ref-row-6" style="color:#ffd700">HH + LL</div><div class="ref-cell ref-row-6">⚡ EXPANSION</div><div class="ref-cell ref-row-6" style="color:#ffa502">⚡ Avoid</div><div class="ref-cell ref-row-6" style="color:#8892a4">Both extremes expanding — chaos</div><div class="ref-cell ref-row-6" style="color:#ff4757">DO NOT TRADE</div><div class="ref-cell ref-row-6" style="color:#00d2d3">~40%</div>
+</div>
+<div class="note">TradingView sends alerts automatically — you can also type manually at any time</div>
+
+<!-- SOUND SETTINGS -->
+<div class="sound-panel">
+  <h3>🔊 SOUND ALERT SETTINGS</h3>
+  <div class="sound-row">
+    <label>Pitch (Hz)</label>
+    <input type="range" id="sFreq" min="200" max="1200" value="600" oninput="document.getElementById('sfv').textContent=this.value+'Hz'">
+    <span id="sfv">600Hz</span>
+  </div>
+  <div class="sound-row">
+    <label>Volume</label>
+    <input type="range" id="sVol" min="0.05" max="1" step="0.05" value="0.4" oninput="document.getElementById('svv').textContent=Math.round(this.value*100)+'%'">
+    <span id="svv">40%</span>
+  </div>
+  <div class="sound-row">
+    <label>Beeps</label>
+    <input type="range" id="sBeeps" min="1" max="5" value="2" oninput="document.getElementById('sbv').textContent=this.value">
+    <span id="sbv">2</span>
+  </div>
+  <div class="sound-row">
+    <label>Duration</label>
+    <input type="range" id="sDur" min="0.05" max="0.5" step="0.05" value="0.15" oninput="document.getElementById('sdv').textContent=Math.round(this.value*1000)+'ms'">
+    <span id="sdv">150ms</span>
+  </div>
+  <button class="test-btn test-long" onclick="testSound()">▶ TEST SOUND</button>
+</div>
+
+<script>
+const structures = {
+  'HH+HL':'UPTREND','LH+LL':'DOWNTREND','LH+HL':'CONSOLIDATION','HH+LL':'EXPANSION'
+};
+const structureDisplay = {
+  'UPTREND':'✅ UPTREND','DOWNTREND':'🔴 DOWNTREND','CONSOLIDATION':'🟡 CONSOLIDATION','EXPANSION':'⚡ EXPANSION'
+};
+
+function isNoTradeTime() {
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  return (mins >= 540 && mins < 600) || (mins >= 960 && mins < 1080);
+}
+
+function tickClock() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  document.getElementById('clockDisplay').textContent = pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds());
+  const noTrade = isNoTradeTime();
+  const statusEl = document.getElementById('timeStatus');
+  const bannerEl = document.getElementById('noTradeBanner');
+  if (noTrade) {
+    statusEl.textContent = '🚫 NO TRADE ZONE';
+    statusEl.className = 'status-no';
+    bannerEl.classList.add('active');
+  } else {
+    statusEl.textContent = '✅ TRADING ALLOWED';
+    statusEl.className = 'status-ok';
+    bannerEl.classList.remove('active');
+  }
+}
+
+function getOutputs(struct, lp) {
+  if (struct === 'UPTREND') {
+    if (lp === 'HL') return { next:'HH coming up', meaning:'Buyers confirmed — LONG forming NOW', action:'Drop to 5M — Find C2 — Enter C4 LONG — Wait for retracement to 50% Fib', enter:'✅ YES — Enter C4 — WAIT FOR RETRACEMENT', ec:'#00ff88', sig:'long', sigMsg:'LONG — UPTREND + HL last — Drop to 5M — Find C2 — Enter C4 — WAIT FOR RETRACEMENT TO 50% FIB — Target 60pts' };
+    if (lp === 'HH') return { next:'HL coming down', meaning:'Pullback forming — HL building', action:'Wait for 5M HL to confirm — then find C2 LONG', enter:'⏳ NOT YET', ec:'#ffa502', sig:'wait', sigMsg:'WAIT — HH formed — Correction starting — Wait for 5M HL to confirm — then LONG' };
+    if (lp === 'LL') return { next:'HL forming soon', meaning:'5M pulling back — HL building inside uptrend', action:'Wait for 5M HL to confirm — then find C2 LONG', enter:'⏳ GET READY', ec:'#ffa502', sig:'wait', sigMsg:'WAIT — Correction forming on 5M — Wait for HL to confirm — then find C2 — Enter LONG' };
+    if (lp === 'LH') return { next:'HL or LL coming', meaning:'5M showing LH — watch carefully', action:'Wait for 15M structure to confirm before acting', enter:'⏳ NOT YET', ec:'#ffa502', sig:'wait', sigMsg:'WAIT — 5M LH inside uptrend — Wait for 15M to confirm direction' };
+  }
+  if (struct === 'DOWNTREND') {
+    if (lp === 'LH') return { next:'LL coming down', meaning:'Sellers confirmed — SHORT forming NOW', action:'Drop to 5M — Find C2 — Enter C4 SHORT — Wait for retracement to 50% Fib', enter:'✅ YES — Enter C4 — WAIT FOR RETRACEMENT', ec:'#00ff88', sig:'short', sigMsg:'SHORT — DOWNTREND + LH last — Drop to 5M — Find C2 — Enter C4 — WAIT FOR RETRACEMENT TO 50% FIB — Target 60pts' };
+    if (lp === 'LL') return { next:'LH coming up', meaning:'Bounce forming — LH building', action:'Wait for 5M LH to confirm — then find C2 SHORT', enter:'⏳ NOT YET', ec:'#ffa502', sig:'wait', sigMsg:'WAIT — LL formed — Correction starting — Wait for 5M LH to confirm — then SHORT' };
+    if (lp === 'HH') return { next:'LH forming soon', meaning:'5M bouncing — LH building inside downtrend', action:'Wait for 5M LH to confirm — then find C2 SHORT', enter:'⏳ GET READY', ec:'#ffa502', sig:'wait', sigMsg:'WAIT — Correction forming on 5M — Wait for LH to confirm — then find C2 — Enter SHORT' };
+    if (lp === 'HL') return { next:'LH or HH coming', meaning:'5M showing HL — watch carefully', action:'Wait for 15M structure to confirm before acting', enter:'⏳ NOT YET', ec:'#ffa502', sig:'wait', sigMsg:'WAIT — 5M HL inside downtrend — Wait for 15M to confirm direction' };
+  }
+  if (struct === 'CONSOLIDATION') return { next:'Breakout either side', meaning:'Do not trade — wait for trend', action:'Wait for HH+HL or LH+LL on 15M', enter:'❌ NO TRADE', ec:'#ffa502', sig:'wait', sigMsg:'WAIT — Consolidation — Do not trade — Wait for HH+HL or LH+LL on 15M' };
+  if (struct === 'EXPANSION')     return { next:'Chaos — avoid', meaning:'Both extremes expanding', action:'DO NOT TRADE — close platform', enter:'❌ DO NOT TRADE', ec:'#ff4757', sig:'wait', sigMsg:'DO NOT TRADE — Expansion — No edge — Stay out' };
+  return { next:'—', meaning:'Check inputs', action:'WAIT', enter:'❌ CHECK INPUT', ec:'#888', sig:'wait', sigMsg:'WAIT — Check your inputs' };
+}
+
+function update() {
+  const sh = document.getElementById('swingHigh').value.trim().toUpperCase();
+  const sl = document.getElementById('swingLow').value.trim().toUpperCase();
+  const lp = document.getElementById('lastPoint').value.trim().toUpperCase();
+  const struct = structures[sh+'+'+sl] || 'UNKNOWN';
+  document.getElementById('structure').textContent = structureDisplay[struct] || '❓ CHECK INPUT';
+  const out = getOutputs(struct, lp);
+  document.getElementById('nextSwing').textContent = out.next;
+  document.getElementById('meaning').textContent   = out.meaning;
+  document.getElementById('action').textContent    = out.action;
+  document.getElementById('enterNow').textContent  = out.enter;
+  document.getElementById('enterNow').style.color  = out.ec;
+  const box = document.getElementById('signalBox');
+  if (isNoTradeTime()) {
+    box.className = 'signal-box';
+    box.style.cssText = 'background:#2a0000;color:#ff4757;border:2px solid #ff4757;animation:none';
+    box.textContent = 'NO TRADE ZONE — Do not open any position right now';
+    return;
+  }
+  box.style.cssText = '';
+  box.className = 'signal-box';
+  box.textContent = out.sigMsg;
+  if (out.sig === 'short')     box.classList.add('flash-short');
+  else if (out.sig === 'long') box.classList.add('flash-long');
+  else if (out.sig === 'watch')box.classList.add('signal-watch');
+  else                         box.classList.add('signal-wait');
+}
+
+// ── Sound Alerts ─────────────────────────────────────────────────────────────
+let audioCtx = null;
+let audioUnlocked = false;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function unlockAudio() {
+  const ctx = getAudioCtx();
+  if (ctx.state === 'suspended') ctx.resume();
+  audioUnlocked = true;
+}
+
+function playAlert() {
+  if (!audioUnlocked) return;
+  const ctx = getAudioCtx();
+  if (ctx.state === 'suspended') ctx.resume();
+  const freq  = parseFloat(document.getElementById('sFreq').value);
+  const vol   = parseFloat(document.getElementById('sVol').value);
+  const beeps = parseInt(document.getElementById('sBeeps').value);
+  const dur   = parseFloat(document.getElementById('sDur').value);
+  for (let i = 0; i < beeps; i++) {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = 'sine'; o.frequency.value = freq;
+    const t = ctx.currentTime + i * (dur + 0.03);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.02);
+    g.gain.linearRampToValueAtTime(0, t + dur);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+}
+
+function testSound() {
+  unlockAudio();
+  playAlert();
+}
+
+function playLong()  { playAlert(); }
+function playShort() { playAlert(); }
+
+// ── Poll server for live state ────────────────────────────────────────────────
+let lastUpdatedAt = null;
+let lastSig = null;
+let lastServerState = { swingHigh: null, swingLow: null, lastPoint: null };
+async function pollState() {
+  try {
+    const res  = await fetch('/state');
+    const data = await res.json();
+    if (data.updatedAt && data.updatedAt !== lastUpdatedAt) {
+      lastUpdatedAt = data.updatedAt;
+      // Only update each field if server value changed — preserves manual edits
+      if (data.swingHigh !== lastServerState.swingHigh) {
+        document.getElementById('swingHigh').value = data.swingHigh;
+        lastServerState.swingHigh = data.swingHigh;
+      }
+      if (data.swingLow !== lastServerState.swingLow) {
+        document.getElementById('swingLow').value = data.swingLow;
+        lastServerState.swingLow = data.swingLow;
+      }
+      if (data.lastPoint !== lastServerState.lastPoint) {
+        document.getElementById('lastPoint').value = data.lastPoint;
+        lastServerState.lastPoint = data.lastPoint;
+      }
+      const t = new Date(data.updatedAt);
+      const pad = n => String(n).padStart(2,'0');
+      document.getElementById('updatedAt').textContent =
+        'Last update: ' + pad(t.getHours()) + ':' + pad(t.getMinutes()) + ':' + pad(t.getSeconds());
+      update();
+      const box = document.getElementById('signalBox');
+      const isLong  = box.classList.contains('flash-long');
+      const isShort = box.classList.contains('flash-short');
+      if (isLong || isShort) playAlert();
+    }
+  } catch(e) {
+    // server unreachable — inputs remain manual
+  }
+}
+
+setInterval(tickClock,  1000);
+setInterval(pollState,  3000);  // polls every 3 seconds
+tickClock();
+update();
+pollState();
+</script>
+</body>
+</html>
