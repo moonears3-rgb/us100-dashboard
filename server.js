@@ -14,7 +14,7 @@ function loadState() {
       return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
     }
   } catch(e) {}
-  return { swingHigh: 'HH', swingLow: 'HL', lastPoint: 'HL', lastPoint1H: 'LL', updatedAt: null };
+  return { swingHigh: 'HH', swingLow: 'HL', lastPoint: 'HL', lastPoint1H: 'LL', goldSwingHigh: 'HH', goldSwingLow: 'HL', goldLastPoint: 'HL', updatedAt: null };
 }
 
 function saveState(s) {
@@ -31,7 +31,10 @@ app.post('/webhook', (req, res) => {
   if      (type === 'swingHigh')   state.swingHigh   = val;
   else if (type === 'swingLow')    state.swingLow    = val;
   else if (type === 'lastPoint')   state.lastPoint   = val;
-  else if (type === 'lastPoint1H') state.lastPoint1H = val;
+  else if (type === 'lastPoint1H')   state.lastPoint1H   = val;
+  else if (type === 'gold_swingHigh') state.goldSwingHigh = val;
+  else if (type === 'gold_swingLow')  state.goldSwingLow  = val;
+  else if (type === 'gold_lastPoint') state.goldLastPoint = val;
   else return res.status(400).json({ error: 'Invalid type' });
   state.updatedAt = new Date().toISOString();
   state.updatedType = type;
@@ -41,6 +44,18 @@ app.post('/webhook', (req, res) => {
 });
 
 app.get('/state', (req, res) => res.json(state));
+
+app.get('/gold-state', (req, res) => res.json({
+  goldSwingHigh: state.goldSwingHigh,
+  goldSwingLow:  state.goldSwingLow,
+  goldLastPoint: state.goldLastPoint,
+  updatedAt:     state.updatedAt,
+  updatedType:   state.updatedType
+}));
+
+app.get('/gold', (req, res) => {
+  res.sendFile(require('path').join(__dirname, 'public', 'gold.html'));
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Running on port ${PORT}`));
